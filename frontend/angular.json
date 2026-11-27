@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "pathology-ui": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/pathology-ui",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "styles": ["src/styles.css"]
+          },
+          "configurations": {
+            "production": {"budgets": [{"type": "initial", "maximumWarning": "600kB", "maximumError": "1MB"}], "outputHashing": "all"},
+            "development": {"optimization": false, "extractLicenses": false, "sourceMap": true}
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {"builder": "@angular-devkit/build-angular:dev-server", "configurations": {"production": {"buildTarget": "pathology-ui:build:production"}, "development": {"buildTarget": "pathology-ui:build:development"}}, "defaultConfiguration": "development"}
+      }
+    }
+  },
+  "cli": {
+    "analytics": "2a02535a-e43a-49f1-a1c3-08f9c9162b46"
+  }
+}

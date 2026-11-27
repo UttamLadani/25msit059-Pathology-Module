@@ -1,0 +1,142 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#" (click)="$event.preventDefault(); setScreen('tests')">
+      <span class="brand-mark">f.</span>
+      <span><strong>fieldnote</strong><small>CLINICAL WORKSPACE</small></span>
+    </a>
+    <div class="workspace-label">LABORATORY</div>
+    <nav aria-label="Pathology module">
+      <button type="button" [class.active]="screen === 'tests'" (click)="setScreen('tests')"><span class="nav-index">01</span> Test master</button>
+      <button type="button" [class.active]="screen === 'orders'" (click)="setScreen('orders')"><span class="nav-index">02</span> Test orders <span class="nav-count">{{ orders.length }}</span></button>
+      <button type="button" [class.active]="screen === 'results'" (click)="setScreen('results')"><span class="nav-index">03</span> Result entry</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="lab-status"><span class="status-light"></span><span><strong>Lab workspace</strong><small>LOCAL DEMO</small></span></div>
+      <div class="sidebar-foot">PATHOLOGY · MODULE 01</div>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <div class="crumb">Workspace <span>/</span> Pathology <span>/</span> <strong>{{ screen === 'tests' ? 'Test master' : screen === 'orders' ? 'Test orders' : 'Result entry' }}</strong></div>
+      <div class="top-date"><span class="date-dot"></span>{{ selectedDate | date:'EEEE, d MMM yyyy' }}</div>
+    </header>
+
+    <div class="page-content">
+      @if (error) { <div class="notice error-notice" role="alert"><span>{{ error }}</span><button type="button" aria-label="Dismiss" (click)="error = ''">×</button></div> }
+      @if (success) { <div class="notice success-notice" role="status"><span>{{ success }}</span><button type="button" aria-label="Dismiss" (click)="success = ''">×</button></div> }
+
+      @if (screen === 'tests') {
+        <section class="page-heading">
+          <div><p class="eyebrow">CATALOGUE MANAGEMENT</p><h1>Test master</h1><p class="heading-copy">Define the investigations available to your laboratory.</p></div>
+          <div class="heading-stat"><span>ACTIVE TESTS</span><strong>{{ tests.length.toString().padStart(2, '0') }}</strong></div>
+        </section>
+        <section class="split-layout">
+          <form class="panel form-panel" (ngSubmit)="createTest()">
+            <div class="panel-title"><div><span class="step-tag">NEW ENTRY</span><h2>Add a test</h2></div><span class="panel-number">01 / 03</span></div>
+            <label>Test name<input name="name" [(ngModel)]="testDraft.name" placeholder="e.g. Complete Blood Count" required maxlength="120"></label>
+            <div class="field-row">
+              <label>Test code<input name="code" [(ngModel)]="testDraft.code" placeholder="e.g. CBC-01" required maxlength="30"></label>
+              <label>Sample type<input name="sampleType" [(ngModel)]="testDraft.sampleType" placeholder="e.g. Whole blood" required maxlength="80"></label>
+            </div>
+            <label>Normal range <span class="label-hint">as displayed on report</span><input name="normalRange" [(ngModel)]="testDraft.normalRange" placeholder="e.g. 4.0–11.0 × 10⁹/L" required maxlength="120"></label>
+            <label>Price <span class="label-hint">local currency</span><div class="price-input"><span>$</span><input name="price" type="number" min="0" step="0.01" [(ngModel)]="testDraft.price" placeholder="0.00" required></div></label>
+            <button class="primary-button" type="submit" [disabled]="busy">{{ busy ? 'Saving…' : 'Add to catalogue' }}<span>↗</span></button>
+          </form>
+
+          <section class="panel list-panel">
+            <div class="panel-title list-title"><div><span class="step-tag">AVAILABLE INVESTIGATIONS</span><h2>Test catalogue <span class="count-pill">{{ tests.length }}</span></h2></div>
+              <div class="search-box"><span>⌕</span><input aria-label="Search tests by name" [(ngModel)]="search" (ngModelChange)="loadTests()" placeholder="Search tests"></div>
+            </div>
+            @if (tests.length) {
+              <div class="table-wrap"><table><thead><tr><th>TEST</th><th>SAMPLE / RANGE</th><th class="price-col">PRICE</th></tr></thead><tbody>
+                @for (test of tests; track test.id) {
+                  <tr><td><strong>{{ test.name }}</strong><small>{{ test.code }}</small></td><td><strong class="sample-name">{{ test.sampleType }}</strong><small>{{ test.normalRange }}</small></td><td class="price-col price-value">{{ test.price | currency }}</td></tr>
+                }
+              </tbody></table></div>
+            } @else {
+              <div class="empty-state"><span class="empty-symbol">01</span><strong>{{ search ? 'No matching tests' : 'Your catalogue is ready' }}</strong><p>{{ search ? 'Try another test name.' : 'Add your first investigation using the form.' }}</p></div>
+            }
+            <div class="list-foot"><span>TEST CODE</span><span>SEARCH BY NAME</span><span>PRICING</span></div>
+          </section>
+        </section>
+      }
+
+      @if (screen === 'orders') {
+        <section class="page-heading">
+          <div><p class="eyebrow">PATIENT WORKFLOW</p><h1>Test orders</h1><p class="heading-copy">Create a lab request and track today’s collection queue.</p></div>
+          <label class="date-control">ORDER DATE<input type="date" [(ngModel)]="selectedDate" (ngModelChange)="loadOrders()"></label>
+        </section>
+        <section class="split-layout order-layout">
+          <form class="panel form-panel" (ngSubmit)="createOrder()">
+            <div class="panel-title"><div><span class="step-tag">NEW REQUEST</span><h2>Patient details</h2></div><span class="panel-number">02 / 03</span></div>
+            <label>Patient name<input name="patientName" [(ngModel)]="orderDraft.patientName" placeholder="Full name" required maxlength="120"></label>
+            <label>Phone number<input name="phone" [(ngModel)]="orderDraft.phone" placeholder="Contact number" required maxlength="30" inputmode="tel"></label>
+            <label>Investigation<select name="testId" [(ngModel)]="orderDraft.testId" required><option [ngValue]="null" disabled>Select a test</option>@for (test of tests; track test.id) { <option [ngValue]="test.id">{{ test.name }} · {{ test.price | currency }}</option> }</select></label>
+            @if (!tests.length) { <p class="inline-hint">Add an investigation in Test master before creating an order.</p> }
+            <label>Order date<input name="orderDate" type="date" [(ngModel)]="orderDraft.orderDate" required></label>
+            <button class="primary-button" type="submit" [disabled]="busy || !tests.length">{{ busy ? 'Creating…' : 'Create lab order' }}<span>↗</span></button>
+          </form>
+
+          <section class="panel list-panel">
+            <div class="panel-title list-title"><div><span class="step-tag">ORDERS FOR DATE</span><h2>Lab requests <span class="count-pill">{{ orders.length }}</span></h2></div><span class="queue-date">{{ selectedDate | date:'d MMM' }}</span></div>
+            @if (orders.length) {
+              <div class="table-wrap"><table class="order-table"><thead><tr><th>ORDER / PATIENT</th><th>INVESTIGATION</th><th>STATUS</th></tr></thead><tbody>
+                @for (order of orders; track order.id) {
+                  <tr><td><strong>{{ order.patientName }}</strong><small>{{ order.orderNumber }} · {{ order.phone }}</small></td><td><strong class="sample-name">{{ order.testName }}</strong><small>{{ order.testCode }}</small></td><td><span class="status-chip" [class.complete-chip]="order.status === 'COMPLETED'">{{ order.status === 'COMPLETED' ? 'Completed' : 'Pending' }}</span></td></tr>
+                }
+              </tbody></table></div>
+            } @else {
+              <div class="empty-state"><span class="empty-symbol">02</span><strong>No orders for this date</strong><p>New lab requests will appear here.</p></div>
+            }
+            <div class="list-foot"><span>ORDER NUMBER</span><span>PATIENT RECORD</span><span>LIVE STATUS</span></div>
+          </section>
+        </section>
+      }
+
+      @if (screen === 'results') {
+        <section class="page-heading">
+          <div><p class="eyebrow">REPORTING DESK</p><h1>Result entry</h1><p class="heading-copy">Record findings, add a technician note, and complete the report.</p></div>
+          <label class="date-control">ORDER DATE<input type="date" [(ngModel)]="selectedDate" (ngModelChange)="loadOrders()"></label>
+        </section>
+        <section class="result-layout">
+          <section class="panel queue-panel">
+            <div class="panel-title"><div><span class="step-tag">{{ selectedDate | date:'d MMM yyyy' }}</span><h2>Lab requests <span class="count-pill">{{ orders.length }}</span></h2></div></div>
+            @if (orders.length) {
+              <div class="result-list">
+                @for (order of orders; track order.id) {
+                  <button type="button" class="result-order" [class.selected-order]="selectedOrder?.id === order.id" (click)="selectOrder(order)">
+                    <span class="order-initial">{{ order.patientName.charAt(0).toUpperCase() }}</span><span class="order-person"><strong>{{ order.patientName }}</strong><small>{{ order.testName }} · {{ order.orderNumber }}</small></span><span class="status-chip" [class.complete-chip]="order.status === 'COMPLETED'">{{ order.status === 'COMPLETED' ? 'Done' : 'Pending' }}</span>
+                  </button>
+                }
+              </div>
+            } @else { <div class="empty-state compact-empty"><span class="empty-symbol">03</span><strong>Nothing to report yet</strong><p>Orders for the selected date will appear here.</p></div> }
+            <div class="queue-note"><span class="status-light"></span> {{ pendingCount }} awaiting result entry</div>
+          </section>
+
+          <section class="panel report-panel">
+            @if (selectedOrder) {
+              <div class="report-heading"><div><span class="step-tag">{{ selectedOrder.status === 'COMPLETED' ? 'FINAL REPORT' : 'RESULT WORKSHEET' }}</span><h2>{{ selectedOrder.testName }}</h2><p>{{ selectedOrder.orderNumber }} <span>·</span> {{ selectedOrder.orderDate | date:'d MMM yyyy' }}</p></div><span class="status-chip" [class.complete-chip]="selectedOrder.status === 'COMPLETED'">{{ selectedOrder.status === 'COMPLETED' ? 'Completed' : 'In progress' }}</span></div>
+              <div class="patient-strip"><span class="patient-avatar">{{ selectedOrder.patientName.charAt(0).toUpperCase() }}</span><span><small>PATIENT</small><strong>{{ selectedOrder.patientName }}</strong></span><span><small>PHONE</small><strong>{{ selectedOrder.phone }}</strong></span><span><small>SPECIMEN</small><strong>{{ selectedOrder.sampleType }}</strong></span></div>
+              <div class="range-reference"><span>REFERENCE RANGE</span><strong>{{ selectedOrder.normalRange }}</strong></div>
+              @if (selectedOrder.status === 'COMPLETED') {
+                <div class="completed-result"><span class="result-label">OBSERVED VALUE</span><strong>{{ selectedOrder.resultValue }}</strong></div>
+                <div class="notes-display"><span class="result-label">TECHNICIAN NOTES</span><p>{{ selectedOrder.technicianNotes || 'No notes recorded.' }}</p></div>
+                <div class="completion-stamp"><span class="stamp-check">✓</span> Result completed <span>{{ selectedOrder.completedAt | date:'d MMM yyyy, h:mm a' }}</span></div>
+              } @else {
+                <form class="result-form" (ngSubmit)="saveResult()">
+                  <label>Result value<input name="resultValue" [(ngModel)]="resultDraft.resultValue" placeholder="Enter observed value" required maxlength="200" autofocus></label>
+                  <label>Technician notes <span class="label-hint">optional</span><textarea name="technicianNotes" [(ngModel)]="resultDraft.technicianNotes" rows="3" placeholder="Add context for the reviewing clinician" maxlength="1000"></textarea></label>
+                  <button class="primary-button" type="submit" [disabled]="busy">{{ busy ? 'Saving…' : 'Save and complete report' }}<span>↗</span></button>
+                </form>
+              }
+            } @else {
+              <div class="report-empty"><span class="report-mark">R.</span><h2>Select a lab request</h2><p>Choose an order from the queue to enter a finding or review its completed report.</p></div>
+            }
+          </section>
+        </section>
+      }
+      <footer class="page-footer"><span>FIELDNOTE <b>·</b> PATHOLOGY WORKSPACE</span><span>LOCAL DEMO ENVIRONMENT</span></footer>
+    </div>
+  </main>
+</div>
